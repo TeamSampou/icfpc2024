@@ -12,6 +12,7 @@ module Expr
   , unELambdaVars
   , deSugar
   , toELambdaVars
+  , toELet
   , toExpr2
   , fromExpr2
   , encode
@@ -123,6 +124,30 @@ toELambdaVars = f
     lambdas xs (ELambda x e)       = lambdas (xs . (x:)) e
     lambdas xs (ELambdaVars ys e)  = lambdas (xs . (ys ++)) e
     lambdas xs  e                  = ELambdaVars (xs []) (f e)
+
+{- |
+ -}
+toELet :: Expr' a -> Expr' a
+toELet = f
+  where
+    f e@(EBool {})                                =  e
+    f e@(EInt  {})                                =  e
+    f e@(EStr  {})                                =  e
+    f   (EUnary op e)                             =  EUnary op (f e)
+    f e@(EBinary op e1@(ELambda {}) e2)
+      | op `elem` [Apply, ApplyLazy, ApplyEager]  =  lets id e
+      | otherwise                                 =  EBinary op (f e1) (f e2)
+    f   (EBinary op e1 e2)                        =  EBinary op (f e1) (f e2)
+    f   (EIf e1 e2 e3)                            =  EIf (f e1) (f e2) (f e3)
+    f   (ELambda x e)                             =  ELambda x (f e)
+    f   (ELambdaVars xs e)                        =  ELambdaVars xs (f e)
+    f   (ELet bs e2)                              =  ELet [B ap x (f e1) | B ap x e1 <- bs] (f e2)
+    f e@(EVar {})                                 =  e
+
+    lets bs e@(EBinary ap (ELambda x eb) e2)
+      | ap `elem` [Apply, ApplyLazy, ApplyEager]  = lets (bs . (B ap x e2:)) eb
+      | otherwise                                 = ELet (bs []) (f e)
+    lets bs e                                     = ELet (bs []) (f e)
 
 type Var = Int
 
