@@ -242,17 +242,19 @@ runAndDrawWith' step vals g = runAndDrawWith step (w+2, h+2) vals g
         h = maximum $ map snd g'
         g' = Map.keys g
 
-
+-- TODO: 外から t, gs などを受け取って back や forward できるようにする
+-- TODO: 数字の情報をグリッド外に表示する
 doCommand :: IO ()
 doCommand = do
-  hSetBuffering stdin NoBuffering
-
   putStrLn "Commands:"
   putStrLn "  SPACE or 's': next step"
   putStrLn "  Ctrl+C : break"
   putStr "Press any command> "
   -- ここで Ctrl-C で止めればバッファリングがおかしくなることはない
   bi <- hGetBuffering stdin
+
+  hSetBuffering stdin NoBuffering
+
   s <- getChar
   case s of
     ' ' -> do
