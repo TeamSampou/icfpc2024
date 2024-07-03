@@ -5,7 +5,6 @@ import Control.Arrow (second)
 import Control.Monad (forM_)
 import Data.Char (ord, chr)
 import Data.Function (on)
-import qualified Data.HashMap.Strict as Hash
 import Data.List -- (foldl', foldr, find, partition, unfoldr)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe, isJust, isNothing)
@@ -42,7 +41,7 @@ judge Neq (Number x) (Number y) = x /= y
 judge op x y = error $ "judge: impossible: " ++ show (op, x, y)
 
 type Cell = (Int, Int)
-type Grid = Hash.HashMap Cell Place
+type Grid = Map.Map Cell Place
 type Tick = Int
 type Space = [Grid]
 
@@ -56,24 +55,24 @@ isOperator :: Place -> Bool
 isOperator (Operator _) = True
 isOperator _            = False
 
-operators :: Grid -> Hash.HashMap Cell Place
-operators = Hash.filter isOperator
+operators :: Grid -> Map.Map Cell Place
+operators = Map.filter isOperator
 
 isSubmit :: Place -> Bool
 isSubmit Submit = True
 isSubmit _      = False
 
 submits :: Grid -> Set.Set Cell
-submits = Set.fromList . Hash.keys . Hash.filter isSubmit
+submits = Set.fromList . Map.keys . Map.filter isSubmit
 
 isVar :: Place -> Bool
 isVar (Var _) = True
 isVar _       = False
 
 vars :: Grid -> [(Char, Cell)]
-vars g = map (f . swap) $ Hash.toList vs
+vars g = map (f . swap) $ Map.toList vs
   where
-    vs = Hash.filter isVar g
+    vs = Map.filter isVar g
     swap (a, b) = (b, a)
     f (Var v, c) = (v, c)
     f _ = error "vars: impossible"
@@ -86,36 +85,36 @@ data Update = Erase ![(Cell, Place)]
 -- 各オペレータの更新動作アクション
 operate :: Grid -> (Cell, Place) -> [Update]
 operate g ((x, y), Operator (Move L)) = maybe [] f q  -- <
-  where q = Hash.lookup (x+1, y) g
+  where q = Map.lookup (x+1, y) g
         f r = [ Erase [((x+1, y), r)], Write [((x-1, y), r)]]
 operate g ((x, y), Operator (Move R)) = maybe [] f q  -- >
-  where q = Hash.lookup (x-1, y) g
+  where q = Map.lookup (x-1, y) g
         f r = [ Erase [((x-1, y), r)], Write [((x+1, y), r)]]
 operate g ((x, y), Operator (Move U)) = maybe [] f q  -- ^
-  where q = Hash.lookup (x, y+1) g
+  where q = Map.lookup (x, y+1) g
         f r = [ Erase [((x, y+1), r)], Write [((x, y-1), r)]]
 operate g ((x, y), Operator (Move D)) = maybe [] f q  -- v
-  where q = Hash.lookup (x, y-1) g
+  where q = Map.lookup (x, y-1) g
         f r = [ Erase [((x, y-1), r)], Write [((x, y+1), r)]]
 operate g ((x, y), Operator (Calc op)) = maybe [] f r -- +, -, *, /, %
-  where p = Hash.lookup (x-1, y) g
-        q = Hash.lookup (x, y-1) g
+  where p = Map.lookup (x-1, y) g
+        q = Map.lookup (x, y-1) g
         r = do { p' <- p; q' <- q; return (p', q', calc op p' q') }
         f (a, b, c) = [ Erase [((x-1, y), a), ((x, y-1), b)]
               , Write [((x+1, y), c), ((x, y+1), c)]]
 operate g ((x, y), Operator (Judge op)) = maybe [] f r -- =, #
-  where p = Hash.lookup (x-1, y) g
-        q = Hash.lookup (x, y-1) g
+  where p = Map.lookup (x-1, y) g
+        q = Map.lookup (x, y-1) g
         r = do { p' <- p; q' <- q; return (judge op p' q', p', q') }
         f (c, a, b)
           | c = [ Erase [((x-1, y), a), ((x, y-1), b)]
                 , Write [((x+1, y), b), ((x, y+1), a)]]
           | otherwise = []
 operate g ((x, y), Operator Warp) = maybe [] f dr -- @
-  where dx = Hash.lookup (x-1, y) g
-        dy = Hash.lookup (x+1, y) g
-        dt = Hash.lookup (x, y+1) g
-        dv = Hash.lookup (x, y-1) g
+  where dx = Map.lookup (x-1, y) g
+        dy = Map.lookup (x+1, y) g
+        dt = Map.lookup (x, y+1) g
+        dv = Map.lookup (x, y-1) g
         dr :: Maybe (Cell, Tick, Place)
         dr = do { Number dx' <- dx
                 ; Number dy' <- dy
@@ -134,7 +133,7 @@ initBy vals g = g'
         phi :: (Char, Int) -> Grid -> Grid
         phi (v, n) h = foldr (f . snd) h cs
           where
-            f c = Hash.insert c (Number n)
+            f c = Map.insert c (Number n)
             cs = filter ((==v) . fst) vs
 
         vs = vars g
@@ -156,12 +155,12 @@ steps initGrid = start:unfoldr psi [start]
         g' = foldl phi g upds
           where
             phi :: Grid -> Update -> Grid
-            phi h (Erase cs) = foldr (Hash.delete . fst) h cs
-            phi h (Write cs) = foldr (uncurry Hash.insert) h cs
+            phi h (Erase cs) = foldr (Map.delete . fst) h cs
+            phi h (Write cs) = foldr (uncurry Map.insert) h cs
             phi h (TimeWarp _ _) = h -- NOTE: submit の時には何もしない
 
         ops :: [(Cell, Place)]
-        ops = Hash.toList $ operators g
+        ops = Map.toList $ operators g
 
         upds :: [Update]
         upds = sort $ concatMap (operate g) ops
@@ -173,7 +172,7 @@ steps initGrid = start:unfoldr psi [start]
             f _         = False
 
         sbmts :: [(Cell, Place)]
-        sbmts = filter (isSubmit . snd) $ Hash.toList g
+        sbmts = filter (isSubmit . snd) $ Map.toList g
 
         conflicts :: [(Cell, Place)]
         conflicts = concatMap f wrs
@@ -216,7 +215,7 @@ steps initGrid = start:unfoldr psi [start]
         -- NOTE: Timewarp がある場合は全て同じ Tick に戻るはず
         timewarp = foldr phi (snd (hist !! t)) warps
           where
-            phi (TimeWarp _ (c, p)) = Hash.insert c p
+            phi (TimeWarp _ (c, p)) = Map.insert c p
             phi op = error $ "unexpected warp action: " ++ show op
             t = case head warps of
               TimeWarp tick _ -> tick
@@ -234,7 +233,7 @@ runAndDrawWith' :: [(Char, Int)] -> Grid -> IO ()
 runAndDrawWith' vals g = runAndDrawWith (w+2, h+2) vals g
   where w = maximum $ map fst g'
         h = maximum $ map snd g'
-        g' = Hash.keys g
+        g' = Map.keys g
 
 
 runAndDrawWith :: (Int, Int) -> [(Char, Int)] -> Grid -> IO ()
@@ -269,7 +268,7 @@ showGame (w, h) g = unlines $ map (concatMap pad) grid
     
     grid = [[toStr c
             | x <- [0..w-1]
-            , let c = Hash.lookup (x, y) g]
+            , let c = Map.lookup (x, y) g]
            | y <- [0..h-1]]
     toStr :: Maybe Place -> String
     toStr Nothing                       = "."
@@ -295,7 +294,7 @@ readProblem prob = do
   f <- readFile $ "solutions/" <> prob
   let ls = map (readLine . words) $ lines f
   let ret = zipWith (\y xs -> map (\(x,c) -> ((x,y),c)) xs) [0..] $ map (zip [0..]) ls
-  return $ Hash.fromList $ concatMap (mapMaybe sequenceA) ret
+  return $ Map.fromList $ concatMap (mapMaybe sequenceA) ret
   where
     readLine :: [String] -> [Maybe Place]
     readLine = map readPlace
@@ -327,10 +326,10 @@ readProblem prob = do
 2 . . .
 -}
 sample :: Grid
-sample = Hash.fromList [ ((0,1), Number 5) -- x
-                       , ((1,0), Number 3) -- y
-                       , ((1,1), Operator (Calc Sub))
-                       ]
+sample = Map.fromList [ ((0,1), Number 5) -- x
+                      , ((1,0), Number 3) -- y
+                      , ((1,1), Operator (Calc Sub))
+                      ]
 
 {- | Grid Layout
   0 1 2 3 4 5 6 7 8
@@ -346,32 +345,32 @@ sample = Hash.fromList [ ((0,1), Number 5) -- x
 9 . . . . . 3 . . .
 -}
 add :: Grid
-add = Hash.fromList [ ((4,0), Var 'B')
-                    , ((1,1), Number 0)
-                    , ((2,1), Operator (Move R))
-                    , ((4,1), Operator (Judge Eql))
-                    , ((1,2), Operator (Move D))
-                    , ((2,2), Number 1)
-                    , ((5,2), Operator (Move R))
-                    , ((2,3), Operator (Calc Add))
-                    , ((6,3), Operator (Calc Add))
-                    , ((7,3), Submit)
-                    , ((5,4), Operator (Move U))
-                    , ((2,5), Operator (Move D))
-                    , ((5,5), Var 'A')
-                    , ((6,5), Operator (Move R))
-                    , ((6,6), Number 0)
-                    , ((7,6), Operator (Calc Add))
-                    , ((1,7), Number 1)
-                    , ((2,7), Operator Warp)
-                    , ((3,7), Number 6)
-                    , ((6,7), Operator (Move L))
-                    , ((2,8), Number 3)
-                    , ((4,8), Number 0)
-                    , ((5,8), Operator Warp)
-                    , ((6,8), Number 3)
-                    , ((5,9), Number 3)
-                    ]
+add = Map.fromList [ ((4,0), Var 'B')
+                   , ((1,1), Number 0)
+                   , ((2,1), Operator (Move R))
+                   , ((4,1), Operator (Judge Eql))
+                   , ((1,2), Operator (Move D))
+                   , ((2,2), Number 1)
+                   , ((5,2), Operator (Move R))
+                   , ((2,3), Operator (Calc Add))
+                   , ((6,3), Operator (Calc Add))
+                   , ((7,3), Submit)
+                   , ((5,4), Operator (Move U))
+                   , ((2,5), Operator (Move D))
+                   , ((5,5), Var 'A')
+                   , ((6,5), Operator (Move R))
+                   , ((6,6), Number 0)
+                   , ((7,6), Operator (Calc Add))
+                   , ((1,7), Number 1)
+                   , ((2,7), Operator Warp)
+                   , ((3,7), Number 6)
+                   , ((6,7), Operator (Move L))
+                   , ((2,8), Number 3)
+                   , ((4,8), Number 0)
+                   , ((5,8), Operator Warp)
+                   , ((6,8), Number 3)
+                   , ((5,9), Number 3)
+                   ]
 
 {- | Grid Layout
   0 1 2 3 4 5 6 7 8
@@ -387,32 +386,32 @@ add = Hash.fromList [ ((4,0), Var 'B')
 9 . . . . . 3 . . .
 -}
 mul :: Grid
-mul = Hash.fromList [ ((4,0), Number 0)
-                    , ((1,1), Var 'B')
-                    , ((2,1), Operator (Move R))
-                    , ((4,1), Operator (Judge Eql))
-                    , ((1,2), Operator (Move D))
-                    , ((2,2), Number 1)
-                    , ((5,2), Operator (Move R))
-                    , ((2,3), Operator (Calc Sub))
-                    , ((6,3), Operator (Calc Add))
-                    , ((7,3), Submit)
-                    , ((5,4), Operator (Move U))
-                    , ((2,5), Operator (Move D))
-                    , ((5,5), Number 0)
-                    , ((6,5), Operator (Move R))
-                    , ((6,6), Var 'A')
-                    , ((7,6), Operator (Calc Add))
-                    , ((1,7), Number 1)
-                    , ((2,7), Operator Warp)
-                    , ((3,7), Number 6)
-                    , ((6,7), Operator (Move L))
-                    , ((2,8), Number 3)
-                    , ((4,8), Number 0)
-                    , ((5,8), Operator Warp)
-                    , ((6,8), Number 3)
-                    , ((5,9), Number 3)
-                    ]
+mul = Map.fromList [ ((4,0), Number 0)
+                   , ((1,1), Var 'B')
+                   , ((2,1), Operator (Move R))
+                   , ((4,1), Operator (Judge Eql))
+                   , ((1,2), Operator (Move D))
+                   , ((2,2), Number 1)
+                   , ((5,2), Operator (Move R))
+                   , ((2,3), Operator (Calc Sub))
+                   , ((6,3), Operator (Calc Add))
+                   , ((7,3), Submit)
+                   , ((5,4), Operator (Move U))
+                   , ((2,5), Operator (Move D))
+                   , ((5,5), Number 0)
+                   , ((6,5), Operator (Move R))
+                   , ((6,6), Var 'A')
+                   , ((7,6), Operator (Calc Add))
+                   , ((1,7), Number 1)
+                   , ((2,7), Operator Warp)
+                   , ((3,7), Number 6)
+                   , ((6,7), Operator (Move L))
+                   , ((2,8), Number 3)
+                   , ((4,8), Number 0)
+                   , ((5,8), Operator Warp)
+                   , ((6,8), Number 3)
+                   , ((5,9), Number 3)
+                   ]
 
 {- | Grid Layout
   0 1 2 3 4 5 6 7 8
@@ -428,30 +427,30 @@ mul = Hash.fromList [ ((4,0), Number 0)
 9 . . . . . 3 . . .
 -}
 expr :: Grid
-expr = Hash.fromList [ ((4,0), Number 0)
-                     , ((1,1), Var 'B')
-                     , ((2,1), Operator (Move R))
-                     , ((4,1), Operator (Judge Eql))
-                     , ((1,2), Operator (Move D))
-                     , ((2,2), Number 1)
-                     , ((5,2), Operator (Move R))
-                     , ((2,3), Operator (Calc Sub))
-                     , ((6,3), Operator (Calc Add))
-                     , ((7,3), Submit)
-                     , ((5,4), Operator (Move U))
-                     , ((2,5), Operator (Move D))
-                     , ((5,5), Number 1)
-                     , ((6,5), Operator (Move R))
-                     , ((6,6), Var 'A')
-                     , ((7,6), Operator (Calc Mul))
-                     , ((1,7), Number 1)
-                     , ((2,7), Operator Warp)
-                     , ((3,7), Number 6)
-                     , ((6,7), Operator (Move L))
-                     , ((2,8), Number 3)
-                     , ((4,8), Number 0)
-                     , ((5,8), Operator Warp)
-                     , ((6,8), Number 3)
-                     , ((5,9), Number 3)
-                     ]
+expr = Map.fromList [ ((4,0), Number 0)
+                    , ((1,1), Var 'B')
+                    , ((2,1), Operator (Move R))
+                    , ((4,1), Operator (Judge Eql))
+                    , ((1,2), Operator (Move D))
+                    , ((2,2), Number 1)
+                    , ((5,2), Operator (Move R))
+                    , ((2,3), Operator (Calc Sub))
+                    , ((6,3), Operator (Calc Add))
+                    , ((7,3), Submit)
+                    , ((5,4), Operator (Move U))
+                    , ((2,5), Operator (Move D))
+                    , ((5,5), Number 1)
+                    , ((6,5), Operator (Move R))
+                    , ((6,6), Var 'A')
+                    , ((7,6), Operator (Calc Mul))
+                    , ((1,7), Number 1)
+                    , ((2,7), Operator Warp)
+                    , ((3,7), Number 6)
+                    , ((6,7), Operator (Move L))
+                    , ((2,8), Number 3)
+                    , ((4,8), Number 0)
+                    , ((5,8), Operator Warp)
+                    , ((6,8), Number 3)
+                    , ((5,9), Number 3)
+                    ]
 
