@@ -2,13 +2,14 @@
 module ThreeD where
 
 import Control.Arrow (second)
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, when, unless)
 import Data.Char (ord, chr)
 import Data.Function (on)
 import Data.List -- (foldl', foldr, find, partition, unfoldr)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe, isJust, isNothing)
 import qualified Data.Set as Set
+import System.IO (hGetBuffering, hSetBuffering, BufferMode(..), stdin)
 
 import Debug.Trace (trace)
 
@@ -242,6 +243,28 @@ runAndDrawWith' step vals g = runAndDrawWith step (w+2, h+2) vals g
         g' = Map.keys g
 
 
+doCommand :: IO ()
+doCommand = do
+  hSetBuffering stdin NoBuffering
+
+  putStrLn "Commands:"
+  putStrLn "  SPACE or 's': next step"
+  putStrLn "  Ctrl+C : break"
+  putStr "Press any command> "
+  -- ここで Ctrl-C で止めればバッファリングがおかしくなることはない
+  bi <- hGetBuffering stdin
+  s <- getChar
+  case s of
+    ' ' -> do
+      return ()
+    'q' -> do  -- TODO: quit
+      return ()
+    _ -> do
+      doCommand
+
+  hSetBuffering stdin bi
+  return ()
+
 runAndDrawWith :: Bool           -- ^ ステップ実行するかどうか
                -> (Int, Int)     -- ^ ウィンドウサイズ
                -> [(Char, Int)]  -- ^ 初期値
@@ -250,10 +273,20 @@ runAndDrawWith :: Bool           -- ^ ステップ実行するかどうか
 runAndDrawWith step wh vals g = do
   forM_ (zip [1::Int ..] gs) $ \(t, (v, g')) -> do
     putStrLn $ "Step " ++ show t ++ ":"
+
+    unless (null vals) $ do
+      putStrLn "Initial values:"
+      forM_ vals $ \(c, i) -> do
+        putStrLn $ "  " ++ [c] ++ " = " ++ show i
+        return ()
+
     drawGame wh g'
     putStrLn ""
-    putStr "press enter to continue> "
-    when step $ getLine >> return ()
+
+    when step $ do
+      doCommand
+      return ()
+
     maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
   where gs = runWith vals g
 
