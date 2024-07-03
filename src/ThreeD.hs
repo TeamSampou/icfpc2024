@@ -246,21 +246,18 @@ runAndDrawWith' step vals g = runAndDrawWith step (w+2, h+2) vals g
 -- TODO: 数字の情報をグリッド外に表示する
 doCommand :: IO ()
 doCommand = do
-  putStrLn "Commands:"
-  putStrLn "  SPACE or 's': next step"
-  putStrLn "  Ctrl+C : break"
-  putStr "Press any command> "
-  -- ここで Ctrl-C で止めればバッファリングがおかしくなることはない
   bi <- hGetBuffering stdin
 
-  hSetBuffering stdin NoBuffering
+  putStrLn "Commands:"
+  putStrLn "  SPACE or ENTER: next step"
+  putStrLn "  Ctrl+C : break"
+  putStr "Press any command> "
 
+  hSetBuffering stdin NoBuffering
   s <- getChar
   case s of
-    ' ' -> do
-      return ()
-    'q' -> do  -- TODO: quit
-      return ()
+    ' '  -> return ()
+    '\n' -> return ()
     _ -> do
       doCommand
 
@@ -281,6 +278,7 @@ runAndDrawWith step wh vals g = do
       forM_ vals $ \(c, i) -> do
         putStrLn $ "  " ++ [c] ++ " = " ++ show i
         return ()
+    putStrLn ""
 
     drawGame wh g'
     putStrLn ""
@@ -306,8 +304,15 @@ drawGame :: (Int, Int) -> Grid -> IO ()
 drawGame (w, h) g = putStrLn $ showGame (w, h) g
 
 showGame :: (Int, Int) -> Grid -> String
-showGame (w, h) g = unlines $ map (concatMap pad) grid
+showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..] body
   where
+    header = "   " ++ concatMap showN [0..w-1]
+    body = map (concatMap pad) grid
+    showN :: Int -> String
+    showN n | n == 0 = " 0"
+            | otherwise = case n `mod` 10 of
+                0  -> show $ n `mod` 100
+                n' -> ' ':show n'
     pad s = case length s of
       1 -> ' ' : s
       2 -> s
