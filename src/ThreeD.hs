@@ -2,7 +2,7 @@
 module ThreeD where
 
 import Control.Arrow (second)
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Data.Char (ord, chr)
 import Data.Function (on)
 import Data.List -- (foldl', foldr, find, partition, unfoldr)
@@ -82,7 +82,7 @@ data Update = Erase ![(Cell, Place)]
             | TimeWarp !Tick !(Cell, Place)
             deriving (Show, Eq, Ord)
 
--- 各オペレータの更新動作アクション
+-- 各オペレータの更新アクション
 operate :: Grid -> (Cell, Place) -> [Update]
 operate g ((x, y), Operator (Move L)) = maybe [] f q  -- <
   where q = Map.lookup (x+1, y) g
@@ -222,26 +222,38 @@ steps initGrid = start:unfoldr psi [start]
               op              -> error $ "unexpected warp action: " ++ show op
 
 
--- | c.f.) solveProblem "3d2/sol1.txt" [('A', 3),('B',2)]
-solveProblem :: String -> [(Char, Int)] -> IO ()
-solveProblem prob params = do
+-- | c.f.) solveProblem True "3d2/sol1.txt" [('A', 3),('B',2)]
+solveProblem :: Bool            -- ^ ステップ実行するかどうか
+             -> String          -- ^ 問題ファイル名
+             -> [(Char, Int)]   -- ^ 初期値
+             -> IO ()
+solveProblem step prob params = do
   g <- readProblem prob
-  runAndDrawWith' params g
+  runAndDrawWith' step params g
 
 
-runAndDrawWith' :: [(Char, Int)] -> Grid -> IO ()
-runAndDrawWith' vals g = runAndDrawWith (w+2, h+2) vals g
+runAndDrawWith' :: Bool           -- ^ ステップ実行するかどうか
+                -> [(Char, Int)]  -- ^ 初期値
+                -> Grid           -- ^ 初期 Grid
+                -> IO ()
+runAndDrawWith' step vals g = runAndDrawWith step (w+2, h+2) vals g
   where w = maximum $ map fst g'
         h = maximum $ map snd g'
         g' = Map.keys g
 
 
-runAndDrawWith :: (Int, Int) -> [(Char, Int)] -> Grid -> IO ()
-runAndDrawWith wh vals g = do
+runAndDrawWith :: Bool           -- ^ ステップ実行するかどうか
+               -> (Int, Int)     -- ^ ウィンドウサイズ
+               -> [(Char, Int)]  -- ^ 初期値
+               -> Grid           -- ^ 初期 Grid
+               -> IO ()
+runAndDrawWith step wh vals g = do
   forM_ (zip [1::Int ..] gs) $ \(t, (v, g')) -> do
     putStrLn $ "Step " ++ show t ++ ":"
     drawGame wh g'
     putStrLn ""
+    putStr "press enter to continue> "
+    when step $ getLine >> return ()
     maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
   where gs = runWith vals g
 
