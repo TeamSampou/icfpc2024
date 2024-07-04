@@ -245,8 +245,6 @@ data Command = Step
              | Quit
              deriving (Eq, Show)
 
--- TODO: 外から t, gs などを受け取って back や forward できるようにする
--- TODO: 数字の情報をグリッド外に表示する
 getCommand :: IO Command
 getCommand = do
   bi <- hGetBuffering stdin
@@ -289,7 +287,7 @@ runAndDrawWith wh vals g = do
         drawGame wh g'
         putStrLn ""
 
-      cmd <- liftIO $ getCommand
+      cmd <- liftIO getCommand
       case cmd of
         Step -> return ()
         Quit -> quit ()
