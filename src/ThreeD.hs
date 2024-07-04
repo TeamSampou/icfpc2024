@@ -248,18 +248,15 @@ doCommand :: IO ()
 doCommand = do
   bi <- hGetBuffering stdin
 
-  putStrLn "Commands:"
-  putStrLn "  SPACE or ENTER: next step"
-  putStrLn "  Ctrl+C : break"
-  putStr "Press any command> "
+  putStr "Press any key to continue: "
 
   hSetBuffering stdin NoBuffering
-  s <- getChar
-  case s of
-    ' '  -> return ()
+  c <- getChar
+  case c of
     '\n' -> return ()
-    _ -> do
-      doCommand
+    _    -> do
+      putStrLn ""
+      return ()
 
   hSetBuffering stdin bi
   return ()
@@ -270,7 +267,7 @@ runAndDrawWith :: Bool           -- ^ ステップ実行するかどうか
                -> Grid           -- ^ 初期 Grid
                -> IO ()
 runAndDrawWith step wh vals g = do
-  forM_ (zip [1::Int ..] gs) $ \(t, (v, g')) -> do
+  forM_ (zip [0::Int ..] gs) $ \(t, (v, g')) -> do
     putStrLn $ "Step " ++ show t ++ ":"
 
     unless (null vals) $ do
@@ -288,7 +285,7 @@ runAndDrawWith step wh vals g = do
       return ()
 
     maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
-  where gs = runWith vals g
+  where gs = (Nothing, g):runWith vals g
 
 runWith :: [(Char, Int)] -> Grid -> [(Maybe Int, Grid)]
 runWith vals g = run $ initBy vals g
@@ -317,7 +314,8 @@ showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..]
       1 -> ' ' : s
       2 -> s
       _ -> "??"
-    
+
+    grid :: [[String]]
     grid = [[toStr c
             | x <- [0..w-1]
             , let c = Map.lookup (x, y) g]
