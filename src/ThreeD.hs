@@ -249,7 +249,7 @@ getCommand :: IO Command
 getCommand = do
   bi <- hGetBuffering stdin
 
-  putStr "Press any key to continue: "
+  putStr "Enter command: [s]tep, [q]uit) "
 
   hSetBuffering stdin NoBuffering
   c <- getChar
@@ -287,12 +287,16 @@ runAndDrawWith wh vals g = do
         drawGame wh g'
         putStrLn ""
 
-      cmd <- liftIO getCommand
-      case cmd of
-        Step -> return ()
-        Quit -> quit ()
+      case v of
+        Nothing -> do
+          cmd <- liftIO getCommand
+          case cmd of
+            Step -> return ()
+            Quit -> quit ()
 
-      liftIO $ maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
+        Just val  -> do
+          liftIO $ putStrLn $ "Result: " ++ show val
+
   where gs = (Nothing, g):runWith vals g
         withQuit = flip runContT pure . callCC
 
