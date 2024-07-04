@@ -3,9 +3,10 @@ module ThreeD where
 
 import Control.Arrow (second)
 import Control.Monad (forM_, when, unless)
-import Data.Char (ord, chr)
+import Control.Monad.Cont
+import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Function (on)
-import Data.List -- (foldl', foldr, find, partition, unfoldr)
+import Data.List (foldl', foldr, find, partition, unfoldr, sort)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe, isJust, isNothing)
 import qualified Data.Set as Set
@@ -224,68 +225,79 @@ steps initGrid = start:unfoldr psi [start]
 
 
 -- | c.f.) solveProblem True "3d2/sol1.txt" [('A', 3),('B',2)]
-solveProblem :: Bool            -- ^ ステップ実行するかどうか
-             -> String          -- ^ 問題ファイル名
+solveProblem :: String          -- ^ 問題ファイル名
              -> [(Char, Int)]   -- ^ 初期値
              -> IO ()
-solveProblem step prob params = do
+solveProblem prob params = do
   g <- readProblem prob
-  runAndDrawWith' step params g
+  runAndDrawWith' params g
 
 
-runAndDrawWith' :: Bool           -- ^ ステップ実行するかどうか
-                -> [(Char, Int)]  -- ^ 初期値
+runAndDrawWith' :: [(Char, Int)]  -- ^ 初期値
                 -> Grid           -- ^ 初期 Grid
                 -> IO ()
-runAndDrawWith' step vals g = runAndDrawWith step (w+2, h+2) vals g
+runAndDrawWith' vals g = runAndDrawWith (w+2, h+2) vals g
   where w = maximum $ map fst g'
         h = maximum $ map snd g'
         g' = Map.keys g
 
+data Command = Step
+             | Quit
+             deriving (Eq, Show)
+
 -- TODO: 外から t, gs などを受け取って back や forward できるようにする
 -- TODO: 数字の情報をグリッド外に表示する
-doCommand :: IO ()
-doCommand = do
+getCommand :: IO Command
+getCommand = do
   bi <- hGetBuffering stdin
 
   putStr "Press any key to continue: "
 
   hSetBuffering stdin NoBuffering
   c <- getChar
-  case c of
-    '\n' -> return ()
-    _    -> do
-      putStrLn ""
-      return ()
+  cmd <- case c of
+        's' -> return Step
+        'q' -> do
+          putStrLn "\nQuit."
+          return Quit
+        x   -> do
+          putStrLn $ "Invalid command: " ++ [x]
+          getCommand
 
   hSetBuffering stdin bi
-  return ()
+  return cmd
 
-runAndDrawWith :: Bool           -- ^ ステップ実行するかどうか
-               -> (Int, Int)     -- ^ ウィンドウサイズ
+
+
+runAndDrawWith :: MonadIO m => (Int, Int)     -- ^ ウィンドウサイズ
                -> [(Char, Int)]  -- ^ 初期値
                -> Grid           -- ^ 初期 Grid
-               -> IO ()
-runAndDrawWith step wh vals g = do
-  forM_ (zip [0::Int ..] gs) $ \(t, (v, g')) -> do
-    putStrLn $ "Step " ++ show t ++ ":"
+               -> m ()
+runAndDrawWith wh vals g = do
+  withQuit $ \quit -> do
+    forM_ (zip [0::Int ..] gs) $ \(t, (v, g')) -> do
+      liftIO $ do
+        putStrLn $ "Step " ++ show t ++ ":"
 
-    unless (null vals) $ do
-      putStrLn "Initial values:"
-      forM_ vals $ \(c, i) -> do
-        putStrLn $ "  " ++ [c] ++ " = " ++ show i
-        return ()
-    putStrLn ""
+        unless (null vals) $ do
+          putStrLn "Initial values:"
+          forM_ vals $ \(c, i) -> do
+            putStrLn $ "  " ++ [c] ++ " = " ++ show i
+            return ()
+          putStrLn ""
 
-    drawGame wh g'
-    putStrLn ""
+        drawGame wh g'
+        putStrLn ""
 
-    when step $ do
-      doCommand
-      return ()
+      cmd <- liftIO $ getCommand
+      case cmd of
+        Step -> return ()
+        Quit -> quit ()
 
-    maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
+      liftIO $ maybe (putStr "") (\val -> putStrLn $ "Result: " ++ show val) v
   where gs = (Nothing, g):runWith vals g
+        withQuit = flip runContT pure . callCC
+
 
 runWith :: [(Char, Int)] -> Grid -> [(Maybe Int, Grid)]
 runWith vals g = run $ initBy vals g
