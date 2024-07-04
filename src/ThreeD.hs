@@ -318,7 +318,7 @@ showGame :: (Int, Int) -> Grid -> String
 showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..] body
   where
     header = "   " ++ concatMap showN [0..w-1]
-    body = map (concatMap pad) grid
+    body = map concat grid
     showN :: Int -> String
     showN n | n == 0 = " 0"
             | otherwise = case n `mod` 10 of
@@ -330,10 +330,19 @@ showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..]
       _ -> "??"
 
     grid :: [[String]]
-    grid = [[toStr c
+    grid = [[pad (toStr c)
             | x <- [0..w-1]
-            , let c = Map.lookup (x, y) g]
+            , let c = Map.lookup (x, y) g] ++ moreInfo y g
            | y <- [0..h-1]]
+    moreInfo :: Int -> Grid -> [String]
+    moreInfo y g' = do
+      x <- [0..w-1]
+      let c = Map.lookup (x, y) g'
+      case c of
+        Just (Number n)
+          | n >= 100  -> [ " " ++ show n ++ "@" ++ show (x, y) ]
+          | otherwise -> []
+        _             -> []
     toStr :: Maybe Place -> String
     toStr Nothing                       = "."
     toStr (Just (Number n))             = show n
