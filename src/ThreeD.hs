@@ -317,14 +317,14 @@ drawGame (w, h) g = putStrLn $ showGame (w, h) g
 showGame :: (Int, Int) -> Grid -> String
 showGame (w, h) g = unlines $ header:zipWith (\i l -> showRow i ++ " " ++ l) [0..] body
   where
-    header = intercalate "\n" $ map (("    " ++) . intersperse ' ') . transpose $ cols
+    header = intercalate "\n" $ map (("    "++) . intersperse ' ') . transpose $ cols
       where
         len  = length $ show (w-1)
         cols = map (pad len . show) [0..w-1]
     body = map concat grid
     pad :: Int -> String -> String
     pad size s | size >= len = replicate (size - len) ' ' ++ s
-               | otherwise        = replicate size '?'
+               | otherwise   = replicate size '?'
       where len = length s
     showRow :: Int -> String
     showRow i = replicate (len - length istr) ' ' ++ istr
