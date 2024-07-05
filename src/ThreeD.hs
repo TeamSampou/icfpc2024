@@ -320,20 +320,18 @@ showGame (w, h) g = unlines $ header:zipWith (\i l -> showRow i ++ " " ++ l) [0.
     header = intercalate "\n" $ map (("    " ++) . intersperse ' ') . transpose $ cols
       where
         len  = length $ show (w-1)
-        cols = map (padN len . show) [0..w-1] 
+        cols = map (pad len . show) [0..w-1]
     body = map concat grid
-    padN :: Int -> String -> String
-    padN size s = replicate (size - length s) ' ' ++ s
-    pad s = case length s of
-      1 -> ' ' : s
-      2 -> s
-      _ -> "??"
+    pad :: Int -> String -> String
+    pad size s | size >= len = replicate (size - len) ' ' ++ s
+               | otherwise        = replicate size '?'
+      where len = length s
     showRow :: Int -> String
     showRow i = replicate (len - length istr) ' ' ++ istr
       where len = length $ show (h-1)
             istr = show i
     grid :: [[String]]
-    grid = [[pad (toStr c)
+    grid = [[pad 2 (toStr c)
             | x <- [0..w-1]
             , let c = Map.lookup (x, y) g] ++ moreInfo y g
            | y <- [0..h-1]]
