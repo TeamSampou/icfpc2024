@@ -6,7 +6,7 @@ import Control.Monad (forM_, when, unless)
 import Control.Monad.Cont
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Function (on)
-import Data.List (foldl', foldr, find, partition, unfoldr, sort, transpose, intersperse)
+import Data.List (foldl', foldr, find, partition, unfoldr, sort, transpose, intercalate, intersperse)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe, isJust, isNothing)
 import qualified Data.Set as Set
@@ -317,7 +317,7 @@ drawGame (w, h) g = putStrLn $ showGame (w, h) g
 showGame :: (Int, Int) -> Grid -> String
 showGame (w, h) g = unlines $ header:zipWith (\i l -> showRow i ++ " " ++ l) [0..] body
   where
-    header = init . unlines $ map (("    " ++) . intersperse ' ') . transpose $ cols
+    header = intercalate "\n" $ map (("    " ++) . intersperse ' ') . transpose $ cols
       where
         len  = length $ show (w-1)
         cols = map (padN len . show) [0..w-1] 
