@@ -6,7 +6,7 @@ import Control.Monad (forM_, when, unless)
 import Control.Monad.Cont
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Function (on)
-import Data.List (foldl', foldr, find, partition, unfoldr, sort)
+import Data.List (foldl', foldr, find, partition, unfoldr, sort, transpose, intersperse)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe, isJust, isNothing)
 import qualified Data.Set as Set
@@ -315,20 +315,23 @@ drawGame :: (Int, Int) -> Grid -> IO ()
 drawGame (w, h) g = putStrLn $ showGame (w, h) g
 
 showGame :: (Int, Int) -> Grid -> String
-showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..] body
+showGame (w, h) g = unlines $ header:zipWith (\i l -> showRow i ++ " " ++ l) [0..] body
   where
-    header = "   " ++ concatMap showN [0..w-1]
+    header = init . unlines $ map (("    " ++) . intersperse ' ') . transpose $ cols
+      where
+        len  = length $ show (w-1)
+        cols = map (padN len . show) [0..w-1] 
     body = map concat grid
-    showN :: Int -> String
-    showN n | n == 0 = " 0"
-            | otherwise = case n `mod` 10 of
-                0  -> show $ n `mod` 100
-                n' -> ' ':show n'
+    padN :: Int -> String -> String
+    padN size s = replicate (size - length s) ' ' ++ s
     pad s = case length s of
       1 -> ' ' : s
       2 -> s
       _ -> "??"
-
+    showRow :: Int -> String
+    showRow i = replicate (len - length istr) ' ' ++ istr
+      where len = length $ show (h-1)
+            istr = show i
     grid :: [[String]]
     grid = [[pad (toStr c)
             | x <- [0..w-1]
