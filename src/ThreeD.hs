@@ -275,7 +275,7 @@ runAndDrawWith wh vals g = do
   withQuit $ \quit -> do
     forM_ (zip [0::Int ..] gs) $ \(t, (v, g')) -> do
       liftIO $ do
-        putStrLn $ "Step " ++ show t ++ ":"
+        putStrLn $ "\nStep " ++ show t ++ ":"
 
         unless (null vals) $ do
           putStrLn "Initial values:"
