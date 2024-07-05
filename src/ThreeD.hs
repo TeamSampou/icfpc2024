@@ -340,7 +340,7 @@ showGame (w, h) g = unlines $ header:zipWith (\i l -> showN i ++ " " ++ l) [0..]
       let c = Map.lookup (x, y) g'
       case c of
         Just (Number n)
-          | n >= 100 || n <= -10 -> [ " " ++ show n ++ "@" ++ show (x, y) ]
+          | length (show n) >= 3 -> [ " " ++ show n ++ "@" ++ show (x, y) ]
           | otherwise -> []
         _             -> []
     toStr :: Maybe Place -> String
