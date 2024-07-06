@@ -189,7 +189,7 @@ steps initGrid = start:unfoldr psi [start]
               where
                 phi :: a -> Map.Map k [a] -> Map.Map k [a]
                 phi x = Map.insertWith (<>) (f x) [x]
-            
+
             ss, ws :: [(Cell, Place)]
             (ss, ws) = partition (\(c, _) -> c `elem` map fst sbmts) conflicts
             -- 同一の Submit Cell に対する Write は同じ値でなければ Conflict
@@ -224,7 +224,7 @@ steps initGrid = start:unfoldr psi [start]
               op              -> error $ "unexpected warp action: " ++ show op
 
 
--- | c.f.) solveProblem True "3d2/sol1.txt" [('A', 3),('B',2)]
+-- | c.f.) solveProblem "3d2/sol1.txt" [('A', 3),('B',2)]
 solveProblem :: String          -- ^ 問題ファイル名
              -> [(Char, Int)]   -- ^ 初期値
              -> IO ()
@@ -267,9 +267,9 @@ getCommand = do
 
 
 
-runAndDrawWith :: MonadIO m => (Int, Int)     -- ^ ウィンドウサイズ
-               -> [(Char, Int)]  -- ^ 初期値
-               -> Grid           -- ^ 初期 Grid
+runAndDrawWith :: MonadIO m => (Int, Int)   -- ^ ウィンドウサイズ
+               -> [(Char, Int)]             -- ^ 初期値
+               -> Grid                      -- ^ 初期 Grid
                -> m ()
 runAndDrawWith wh vals g = do
   withQuit $ \quit -> do
