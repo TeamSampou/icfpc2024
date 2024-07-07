@@ -17,7 +17,7 @@ import Debug.Trace (trace)
 
 ($?) :: (Show a, Show b) => (a -> b) -> a -> b
 f $? x = let v = f x
-             msg = "{- "++ show x ++ " => " ++ show v ++ " -}"
+             msg = "{- " ++ show x ++ " => " ++ show v ++ " -}"
           in trace msg v
 
 data Direction = L | R | U | D deriving (Show, Eq, Ord)
