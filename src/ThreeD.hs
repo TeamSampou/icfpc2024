@@ -5,6 +5,7 @@ import Control.Arrow (second)
 import Control.Monad (forM_, when, unless)
 import Control.Monad.Cont
 import Control.Monad.IO.Class (liftIO, MonadIO)
+import Data.Char (isAlpha)
 import Data.Function (on)
 import Data.List (foldl', foldr, find, partition, unfoldr, sort, transpose, intercalate, intersperse)
 import qualified Data.Map as Map
@@ -388,5 +389,6 @@ readProblem prob = do
     readPlace "#" = Just (Operator (Judge Neq))
     readPlace "@" = Just (Operator Warp)
     readPlace "S" = Just Submit
-    readPlace [c] = Just (Var c)  -- only 'A' and 'B' can used, but I dare not limit it for usefullness.
-    readPlace s   = Just (Number (read s))
+    readPlace [c]
+      | isAlpha c = Just (Var c)  -- only 'A' and 'B' can used, but I dare not limit it for usefullness.
+    readPlace s = Just (Number (read s))
