@@ -50,7 +50,7 @@ type Space = [Grid]
 data Place = Operator !Op3D
            | Number   !Int
            | Submit
-           | Var !Char  -- 'A' and 'B' only
+           | Var !Char -- only 'A' and 'B' can used, but I dare not limit it for usefullness.
            deriving (Show, Eq, Ord)
 
 isOperator :: Place -> Bool
@@ -388,8 +388,7 @@ readProblem prob = do
     readPlace "#" = Just (Operator (Judge Neq))
     readPlace "@" = Just (Operator Warp)
     readPlace "S" = Just Submit
-    readPlace "A" = Just (Var 'A')
-    readPlace "B" = Just (Var 'B')
+    readPlace [c] = Just (Var c)  -- only 'A' and 'B' can used, but I dare not limit it for usefullness.
     readPlace s   = Just (Number (read s))
     
 
