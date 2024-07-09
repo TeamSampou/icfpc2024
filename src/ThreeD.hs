@@ -334,19 +334,24 @@ showGame (w, h) g = unlines $ header:zipWith (\i l -> showRow i ++ " " ++ l) [0.
       where len = length $ show (h-1)
             istr = show i
     grid :: [[String]]
-    grid = [[pad 2 (toStr c)
-            | x <- [0..w-1]
-            , let c = Map.lookup (x, y) g] ++ moreInfo y g
-           | y <- [0..h-1]]
-    moreInfo :: Int -> Grid -> [String]
-    moreInfo y g' = do
-      x <- [0..w-1]
-      let c = Map.lookup (x, y) g'
-      case c of
-        Just (Number n)
-          | length (show n) >= 3 -> [ " " ++ show n ++ "@" ++ show (x, y) ]
-          | otherwise -> []
-        _             -> []
+    grid = do
+      y <- [0..h-1]
+      return $ row y ++ moreInfo y g
+      where
+        row :: Int -> [String]
+        row y = do
+          x <- [0..w-1]
+          let c = Map.lookup (x, y) g
+          return $ pad 2 (toStr c)
+        moreInfo :: Int -> Grid -> [String]
+        moreInfo y g' = do
+          x <- [0..w-1]
+          let c = Map.lookup (x, y) g'
+          case c of
+            Just (Number n)
+              | length (show n) >= 3 -> [ " " ++ show n ++ "@" ++ show (x, y) ]
+              | otherwise -> []
+            _             -> []
     toStr :: Maybe Place -> String
     toStr Nothing                       = "."
     toStr (Just (Number n))             = show n
