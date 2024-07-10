@@ -274,9 +274,14 @@ runAndDrawWith :: MonadIO m => (Int, Int)   -- ^ ウィンドウサイズ
                -> m ()
 runAndDrawWith wh vals g = do
   withQuit $ \quit -> do
-    forM_ (zip [0::Int ..] gs) $ \(t, (v, g')) -> do
+    -- tick=-1 means initial code and step starts from 0.
+    forM_ (zip [-1::Int ..] gs) $ \(t, (v, g')) -> do
       liftIO $ do
-        putStrLn $ "\nStep " ++ show t ++ ":"
+        putStrLn ""
+        putStrLn $
+          if t < 0
+          then "Step: initial"
+          else "Step " ++ show t ++ ":"
 
         unless (null vals) $ do
           putStrLn "Initial values:"
