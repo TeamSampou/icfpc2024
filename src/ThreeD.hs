@@ -279,11 +279,11 @@ runAndDrawWith wh vals g = do
         putStrLn ""
         putStrLn $
           case t of
-            Nothing   -> "Initial"
+            Nothing   -> "Initial state"
             Just tick -> "Step: " ++ show tick
 
         unless (null vals) $ do
-          putStrLn "Initial values:"
+          putStrLn "params:"
           forM_ vals $ \(c, i) -> do
             putStrLn $ "  " ++ [c] ++ " = " ++ show i
             return ()
