@@ -287,7 +287,8 @@ runAndDrawWith wh vals g = do
           forM_ vals $ \(c, i) -> do
             putStrLn $ "  " ++ [c] ++ " = " ++ show i
             return ()
-          putStrLn ""
+
+        putStrLn ""
 
         drawGame wh g'
         putStrLn ""
